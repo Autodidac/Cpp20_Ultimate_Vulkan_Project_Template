@@ -4,8 +4,8 @@
 cmake_minimum_required (VERSION 3.8)
 #cmake_minimum_required(VERSION 3.3[...<3.8>] [FATAL_ERROR])
 
-project(MyCrossPlatformProject VERSION 1.0
-                  DESCRIPTION "My Cross Platform Project Description"
+project(MyCrossPlatformVulkanProject VERSION 1.0
+                  DESCRIPTION "My Cross Platform Vulkan Project Description"
                   LANGUAGES CXX)
 
 # Set C++ standard
@@ -44,11 +44,11 @@ else()
 endif()
 
 # Include sub-projects
-add_subdirectory("cmakeapp1")
-add_subdirectory("app1")
+add_subdirectory("cmakevulkanapp1")
+add_subdirectory("vulkanapp1")
 
-add_subdirectory ("Application1")
-add_subdirectory ("StaticLib1")
+#add_subdirectory ("VulkanApplication1")
+#add_subdirectory ("VulkanStaticLib1")
 
 
 

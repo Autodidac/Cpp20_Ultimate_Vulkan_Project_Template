@@ -14,8 +14,8 @@
       "displayName": "Linux Debug (vcpkg)",
       "inherits": [ "vcpkg" ],
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/Bin/${presetName}",
-      "installDir": "${sourceDir}/Bin/install/${presetName}",
+      "binaryDir": "${sourceDir}/bin/${presetName}",
+      "installDir": "${sourceDir}/bin/install/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       },
@@ -46,8 +46,8 @@
       "displayName": "macOS Debug (vcpkg)",
       "inherits": [ "vcpkg" ],
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/Bin/${presetName}",
-      "installDir": "${sourceDir}/Bin/install/${presetName}",
+      "binaryDir": "${sourceDir}/bin/${presetName}",
+      "installDir": "${sourceDir}/bin/install/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       },
@@ -78,14 +78,14 @@
       "hidden": true,
       "inherits": [ "vcpkg" ],
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/Bin/${presetName}",
-      "installDir": "${sourceDir}/Bin/install/${presetName}",
+      "binaryDir": "${sourceDir}/bin/${presetName}",
+      "installDir": "${sourceDir}/bin/install/${presetName}",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl.exe",
         "CMAKE_CXX_COMPILER": "cl.exe"
       },
       "environment": {
-        "VCPKG_ROOT": "C:/Users/me/source/repos/Cpp20_Ultimate_Repo_Template_2025/bin/x64-release/vcpkg_installed"
+        "VCPKG_ROOT": "C:/Users/me/source/repos/vcpkg"
       },
       "condition": {
         "type": "equals",
