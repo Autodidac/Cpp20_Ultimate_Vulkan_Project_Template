@@ -20,7 +20,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Header.h">
+    <ClInclude Include="avulkanheaderonly.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avulkancamera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

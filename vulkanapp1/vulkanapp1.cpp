@@ -4,5 +4,5 @@ vk::DispatchLoaderDynamic vk::defaultDispatchLoaderDynamic;
 #endif
 
 #define VULKAN_CUBE_MAIN
-#include "Header.h"
+#include "avulkanheaderonly.hpp"
 

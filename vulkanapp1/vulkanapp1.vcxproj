@@ -163,7 +163,8 @@
     <ClCompile Include="vulkanapp1.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Header.h" />
+    <ClInclude Include="avulkancamera.hpp" />
+    <ClInclude Include="avulkanheaderonly.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
