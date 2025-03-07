@@ -1,13 +1,16 @@
 ﻿// vulkan_cube.hpp
 #pragma once
 
+// start with GLFW first
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+// platform specific includes
 #if defined(_WIN32)
     #include "Windows.h"
 #endif 
 
+// Inlude VulkanSDK for C++
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #define VULKAN_HPP_NO_EXCEPTIONS
 #define ENABLE_VALIDATION_LAYERS
@@ -18,8 +21,14 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include <glm/glm.hpp>  // For matrices and vectors
-#include <glm/gtc/matrix_transform.hpp> // For transformations like rotate, lookAt, perspective
+// glm is included in the camera code, we'll just use that
+#include "avulkancamera.hpp"
+//#include <glm/glm.hpp>  // For matrices and vectors
+//#include <glm/gtc/matrix_transform.hpp> // For transformations like rotate, lookAt, perspective
+
+// these are for glm::to_string
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
 
 #include <array>
 #include <chrono>
@@ -31,38 +40,45 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #include <stdexcept>         // For exceptions (if necessary)
 #include <string>   // For std::string
 #include <vector>   // For std::vector
+#include <chrono>
 
-/*
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData) {
-    
-    std::cerr << "[Vulkan Validation Layer] ";
-
-    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        std::cerr << "[ERROR] ";
-    } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-        std::cerr << "[WARNING] ";
-    } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-        std::cerr << "[INFO] ";
-    } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-        std::cerr << "[VERBOSE] ";
-    }
-
-    std::cerr << "Message: " << pCallbackData->pMessage << std::endl;
-
-    return VK_FALSE;
+float calculateDeltaTime() {
+    static auto lastTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
+    lastTime = currentTime;
+    return deltaTime;
 }
 
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr) {
-        func(instance, debugMessenger, pAllocator);
-    }
-}
-*/
+//static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+//    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+//    VkDebugUtilsMessageTypeFlagsEXT messageType,
+//    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+//    void* pUserData) {
+//    
+//    std::cerr << "[Vulkan Validation Layer] ";
+//
+//    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+//        std::cerr << "[ERROR] ";
+//    } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+//        std::cerr << "[WARNING] ";
+//    } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+//        std::cerr << "[INFO] ";
+//    } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+//        std::cerr << "[VERBOSE] ";
+//    }
+//
+//    std::cerr << "Message: " << pCallbackData->pMessage << std::endl;
+//
+//    return VK_FALSE;
+//}
+//
+//void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
+//    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+//    if (func != nullptr) {
+//        func(instance, debugMessenger, pAllocator);
+//    }
+//}
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -119,7 +135,7 @@ struct DebugMessengerDeleter {
 };
 */
 //#define VK_CHECK(result) if(result != vk::Result::eSuccess) { \
-    throw std::runtime_error("Vulkan error at line " + std::to_string(__LINE__)); }
+//    throw std::runtime_error("Vulkan error at line " + std::to_string(__LINE__)); }
 
 #define VK_CHECK(x)                                                                    \
     do                                                                                \
@@ -135,8 +151,31 @@ struct DebugMessengerDeleter {
 
 namespace VulkanCube {
 
+    // setup the camera
+   // auto cam = Camera::create(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
+    inline Camera::State cam = Camera::create(
+        glm::vec3(0.0f, 0.0f, 5.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        -90.0f, 0.0f
+    );
+
+
+
+    //enum class Direction { Forward = 0, Backward, Left, Right };
+
+    //auto processKeyboard(Camera::State& cam, Camera::Direction direction, float deltaTime) -> void {
+    //    float velocity = cam.speed * deltaTime;
+    //    switch (direction) {
+    //    case Camera::Direction::Forward:  cam.position += cam.front * velocity; break;
+    //    case Camera::Direction::Backward: cam.position -= cam.front * velocity; break;
+    //    case Camera::Direction::Left:     cam.position -= cam.right * velocity; break;
+    //    case Camera::Direction::Right:    cam.position += cam.right * velocity; break;
+    //    }
+    //}
+
     struct Vertex {
         glm::vec3 pos;
+        glm::vec3 normal;
         glm::vec2 texCoord;
 
         static vk::VertexInputBindingDescription getBindingDescription() {
@@ -152,21 +191,83 @@ namespace VulkanCube {
     };
 
     const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, -0.5f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f}},
-        {{-0.5f, -0.5f, 0.5f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, 0.5f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, 0.5f}, {0.0f, 1.0f}}
+        // Front face (z = 0.5)
+        {{-0.5f, -0.5f,  0.5f}, {0, 0, 1}, {0, 0}},
+        {{ 0.5f, -0.5f,  0.5f}, {0, 0, 1}, {1, 0}},
+        {{ 0.5f,  0.5f,  0.5f}, {0, 0, 1}, {1, 1}},
+        {{-0.5f,  0.5f,  0.5f}, {0, 0, 1}, {0, 1}},
+        // Back face (z = -0.5)
+        {{ 0.5f, -0.5f, -0.5f}, {0, 0, -1}, {0, 0}},
+        {{-0.5f, -0.5f, -0.5f}, {0, 0, -1}, {1, 0}},
+        {{-0.5f,  0.5f, -0.5f}, {0, 0, -1}, {1, 1}},
+        {{ 0.5f,  0.5f, -0.5f}, {0, 0, -1}, {0, 1}},
+        // Left face (x = -0.5)
+        {{-0.5f, -0.5f, -0.5f}, {-1, 0, 0}, {0, 0}},
+        {{-0.5f, -0.5f,  0.5f}, {-1, 0, 0}, {1, 0}},
+        {{-0.5f,  0.5f,  0.5f}, {-1, 0, 0}, {1, 1}},
+        {{-0.5f,  0.5f, -0.5f}, {-1, 0, 0}, {0, 1}},
+        // Right face (x = 0.5)
+        {{ 0.5f, -0.5f,  0.5f}, {1, 0, 0}, {0, 0}},
+        {{ 0.5f, -0.5f, -0.5f}, {1, 0, 0}, {1, 0}},
+        {{ 0.5f,  0.5f, -0.5f}, {1, 0, 0}, {1, 1}},
+        {{ 0.5f,  0.5f,  0.5f}, {1, 0, 0}, {0, 1}},
+        // Top face (y = 0.5)
+        {{-0.5f,  0.5f,  0.5f}, {0, 1, 0}, {0, 0}},
+        {{ 0.5f,  0.5f,  0.5f}, {0, 1, 0}, {1, 0}},
+        {{ 0.5f,  0.5f, -0.5f}, {0, 1, 0}, {1, 1}},
+        {{-0.5f,  0.5f, -0.5f}, {0, 1, 0}, {0, 1}},
+        // Bottom face (y = -0.5)
+        {{-0.5f, -0.5f, -0.5f}, {0, -1, 0}, {0, 0}},
+        {{ 0.5f, -0.5f, -0.5f}, {0, -1, 0}, {1, 0}},
+        {{ 0.5f, -0.5f,  0.5f}, {0, -1, 0}, {1, 1}},
+        {{-0.5f, -0.5f,  0.5f}, {0, -1, 0}, {0, 1}},
     };
 
     const std::vector<uint16_t> indices = {
-        0,1,2, 2,3,0, 4,5,6, 6,7,4,
-        0,4,7, 7,3,0, 1,5,6, 6,2,1,
-        0,1,5, 5,4,0, 3,2,6, 6,7,3
+        // Front face
+        0, 1, 2, 2, 3, 0,
+        // Back face
+        4, 5, 6, 6, 7, 4,
+        // Left face
+        8, 9,10,10,11, 8,
+        // Right face
+        12,13,14,14,15,12,
+        // Top face
+        16,17,18,18,19,16,
+        // Bottom face
+        20,21,22,22,23,20
     };
+
+
+    //const std::vector<uint16_t> indices = {
+    //    // Back face (z = -0.5) - Desired normal: (0,0,-1)
+    //    0, 3, 2,  2, 1, 0,
+    //    // Front face (z = 0.5) - Desired normal: (0,0,1)
+    //    4, 5, 6,  6, 7, 4,
+    //    // Left face (x = -0.5) - Desired normal: (-1,0,0)
+    //    0, 4, 7,  7, 3, 0,
+    //    // Right face (x = 0.5) - Desired normal: (1,0,0)
+    //    1, 6, 5,  1, 2, 6,
+    //    // Bottom face (y = -0.5) - Desired normal: (0,-1,0)
+    //    0, 1, 5,  5, 4, 0,
+    //    // Top face (y = 0.5) - Desired normal: (0,1,0)
+    //    3, 7, 6,  3, 6, 2
+    //};
+
+    //const std::vector<uint16_t> indices = {
+    //    // Back face (z = -0.5) - Desired normal: (0,0,-1)
+    //    0, 1, 2,  2, 3, 0,
+    //    // Front face (z = 0.5) - Desired normal: (0,0,1)
+    //    4, 5, 6,  6, 7, 4,
+    //    // Left face (x = -0.5) - Desired normal: (-1,0,0)
+    //    0, 4, 7,  7, 3, 0,
+    //    // Right face (x = 0.5) - Desired normal: (1,0,0)
+    //    1, 6, 5,  1, 2, 6,
+    //    // Bottom face (y = -0.5) - Desired normal: (0,-1,0)
+    //    0, 1, 5,  5, 4, 0,
+    //    // Top face (y = 0.5) - Desired normal: (0,1,0)
+    //    3, 7, 6,  3, 6, 2
+    //};
 
     struct UniformBufferObject {
         alignas(16) glm::mat4 model;
@@ -278,13 +379,41 @@ namespace VulkanCube {
         // Vulkan extensions required
         const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
+        float lastX = 400, lastY = 300;
+        bool firstMouse = true;
+        // External variable to control cube rotation (update via input handling)
+        float cubeRotation = 1.0f; // In radians, updated per frame or by user input
+
+        // Define updateCamera to process keyboard input and update the camera state.
+        void updateCamera(float deltaTime) {
+            // Assuming you have a global GLFWwindow* named 'window'
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+                Camera::processKeyboard(VulkanCube::cam, Camera::Direction::Forward, deltaTime);
+            }
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+                Camera::processKeyboard(VulkanCube::cam, Camera::Direction::Backward, deltaTime);
+            }
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+                Camera::processKeyboard(VulkanCube::cam, Camera::Direction::Left, deltaTime);
+            }
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                Camera::processKeyboard(VulkanCube::cam, Camera::Direction::Right, deltaTime);
+            }
+        }
+
+        static void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+            auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (app) {
+                app->processMouseInput(xpos, ypos);
+            }
+        }
+
         void initWindow() {
             // Initialize the dispatcher for global (instance-independent) functions.
             VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
             // Diagnostic: verify that the function pointer is valid.
-            std::cout << "vkEnumerateInstanceLayerProperties pointer: "
-                << (void*)VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceLayerProperties << std::endl;
+           // std::cout << "vkEnumerateInstanceLayerProperties pointer: " << (void*)VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceLayerProperties << std::endl;
 
 
             glfwInit();
@@ -292,11 +421,33 @@ namespace VulkanCube {
             window = glfwCreateWindow(800, 600, "Vulkan Cube", nullptr, nullptr);
             glfwSetWindowUserPointer(window, this);
             glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+
+            // Register the mouse callback to handle mouse movement.
+            glfwSetCursorPosCallback(window, mouse_callback);
+            // Disable the cursor for free-look camera behavior. use Alt+F4 to escape the lack of mouse and close the window 
+            //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+
+        void processMouseInput(double xpos, double ypos) {
+            if (firstMouse) {
+                lastX = static_cast<float>(xpos);
+                lastY = static_cast<float>(ypos);
+                firstMouse = false;
+            }
+
+            float xOffset = static_cast<float>(xpos) - lastX;
+            float yOffset = lastY - static_cast<float>(ypos); // Invert Y
+            yOffset = static_cast<float>(ypos) - lastY; // Remove inversion - comment this out to flip Y axis in mouse control
+
+            lastX = static_cast<float>(xpos);
+            lastY = static_cast<float>(ypos);
+
+            Camera::processMouse(VulkanCube::cam, xOffset, yOffset);
         }
 
         static void framebufferResizeCallback(GLFWwindow* window, int, int) {
-            auto app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-            app->framebufferResized = true;
+            auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (app) app->framebufferResized = true;
         }
 
         void initVulkan() {
@@ -434,7 +585,6 @@ namespace VulkanCube {
             VULKAN_HPP_DEFAULT_DISPATCHER.init(instance.get());
         }
 
-        // -- get Required Extensions ()
         std::vector<const char*> getRequiredExtensions() {
             uint32_t glfwExtensionCount = 0;
             const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -443,12 +593,7 @@ namespace VulkanCube {
             }
 
             std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-            
-            // Optionally add debug utils extension if building in debug mode.
-            #ifdef _DEBUG
-                extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-            #endif
-
+            //extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
             return extensions;
         }
 /*
@@ -798,6 +943,7 @@ namespace VulkanCube {
 
         // --- Render Pass ---
         void createRenderPass() {
+            // Color Attachment Description
             vk::AttachmentDescription colorAttachment(
                 {}, swapChainImageFormat, vk::SampleCountFlagBits::e1,
                 vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
@@ -805,18 +951,27 @@ namespace VulkanCube {
                 vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR
             );
 
+            // Color Attachment Reference
             vk::AttachmentReference colorAttachmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
 
-            vk::SubpassDescription subpass({}, vk::PipelineBindPoint::eGraphics,
-                0, nullptr, 1, &colorAttachmentRef);
+            // Subpass Description
+            vk::SubpassDescription subpass(
+                {}, vk::PipelineBindPoint::eGraphics,
+                0, nullptr, 1, &colorAttachmentRef
+            );
 
+            // Subpass Dependency (External -> Current Subpass)
             vk::SubpassDependency dependency(
                 VK_SUBPASS_EXTERNAL, 0,
-                vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                {}, vk::AccessFlagBits::eColorAttachmentWrite);
+                vk::PipelineStageFlagBits::eColorAttachmentOutput,   // srcStageMask
+                vk::PipelineStageFlagBits::eColorAttachmentOutput,   // dstStageMask
+                {}, vk::AccessFlagBits::eColorAttachmentWrite        // srcAccessMask, dstAccessMask
+            );
 
-            vk::RenderPassCreateInfo renderPassInfo({}, 1, &colorAttachment, 1, &subpass, 1, &dependency);
+            // Render Pass Creation
+            vk::RenderPassCreateInfo renderPassInfo(
+                {}, 1, &colorAttachment, 1, &subpass, 1, &dependency
+            );
 
             // Create the render pass and check for success
             auto result = device->createRenderPassUnique(renderPassInfo);
@@ -830,18 +985,19 @@ namespace VulkanCube {
 
         // --- Graphics Pipeline ---
         void createGraphicsPipeline() {
-
             auto vertShaderCode = readFile("vert.spv");
             auto fragShaderCode = readFile("frag.spv");
 
-            // Pass the device when creating shader modules
+            // Create Shader Modules
             vk::UniqueShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
             vk::UniqueShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);
 
             vk::PipelineShaderStageCreateInfo vertShaderStageInfo({}, vk::ShaderStageFlagBits::eVertex, *vertShaderModule, "main");
             vk::PipelineShaderStageCreateInfo fragShaderStageInfo({}, vk::ShaderStageFlagBits::eFragment, *fragShaderModule, "main");
+
             vk::PipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
+            // Vertex Input Info
             auto bindingDescription = Vertex::getBindingDescription();
             auto attributeDescriptions = Vertex::getAttributeDescriptions();
 
@@ -849,63 +1005,57 @@ namespace VulkanCube {
                 {}, 1, &bindingDescription,
                 static_cast<uint32_t>(attributeDescriptions.size()), attributeDescriptions.data());
 
+            // Input Assembly
             vk::PipelineInputAssemblyStateCreateInfo inputAssembly({}, vk::PrimitiveTopology::eTriangleList);
 
-            vk::Viewport viewport(0.0f, 0.0f,
-                static_cast<float>(swapChainExtent.width),
-                static_cast<float>(swapChainExtent.height),
-                0.0f, 1.0f);
+            // Viewport and Scissor
+            vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height), 0.0f, 1.0f);
             vk::Rect2D scissor({ 0, 0 }, swapChainExtent);
             vk::PipelineViewportStateCreateInfo viewportState({}, 1, &viewport, 1, &scissor);
 
-            vk::PipelineRasterizationStateCreateInfo rasterizer({}, VK_FALSE, VK_FALSE, vk::PolygonMode::eFill,
-                vk::CullModeFlagBits::eBack, vk::FrontFace::eClockwise);
+            // Rasterizer
+            vk::PipelineRasterizationStateCreateInfo rasterizer(
+                {}, VK_FALSE, VK_FALSE, vk::PolygonMode::eFill,
+                vk::CullModeFlagBits::eFront, vk::FrontFace::eClockwise, VK_FALSE, 1.0f);
 
-            rasterizer.frontFace = vk::FrontFace::eCounterClockwise; // Flip Winding Order
-            //rasterizer.cullMode = vk::CullModeFlagBits::eNone; // Disable culling
-            rasterizer.cullMode = vk::CullModeFlagBits::eBack; // Flip Culling Mode
+            // Multisampling (No MSAA)
+            vk::PipelineMultisampleStateCreateInfo multisampling(
+                {}, vk::SampleCountFlagBits::e1, VK_FALSE, 0.0f, nullptr, VK_FALSE, VK_FALSE);
 
-            vk::PipelineMultisampleStateCreateInfo multisampling;
-
+            // Color Blending (Default)
             vk::PipelineColorBlendAttachmentState colorBlendAttachment;
-            colorBlendAttachment.colorWriteMask =
-                vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+            colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
                 vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
 
             vk::PipelineColorBlendStateCreateInfo colorBlending(
                 {}, VK_FALSE, vk::LogicOp::eCopy, 1, &colorBlendAttachment);
 
-            // Creating pipeline layout with the unique device
+            // Descriptor Set Layout (Make sure this is created before)
             vk::PipelineLayoutCreateInfo pipelineLayoutInfo({}, 1, &*descriptorSetLayout);
             auto pipelineLayoutResult = device->createPipelineLayoutUnique(pipelineLayoutInfo);
             if (pipelineLayoutResult.result != vk::Result::eSuccess) {
                 throw std::runtime_error("Failed to create pipeline layout!");
             }
-
-            // Move the value from the ResultValue to the pipelineLayout
             pipelineLayout = std::move(pipelineLayoutResult.value);
 
-            // Create the graphics pipeline info structure
+            // Create Graphics Pipeline
             vk::GraphicsPipelineCreateInfo pipelineInfo(
                 {}, 2, shaderStages, &vertexInputInfo, &inputAssembly,
                 nullptr, &viewportState, &rasterizer, &multisampling,
                 nullptr, &colorBlending, nullptr,
                 *pipelineLayout, *renderPass);
 
-            // Creating graphics pipeline with the unique device
             auto pipelineResult = device->createGraphicsPipelineUnique(nullptr, pipelineInfo);
             if (pipelineResult.result != vk::Result::eSuccess) {
                 throw std::runtime_error("Failed to create graphics pipeline!");
             }
 
-            // Move the value from the ResultValue to the graphicsPipeline
             graphicsPipeline = std::move(pipelineResult.value);
-
         }
 
         vk::UniqueShaderModule createShaderModule(vk::UniqueDevice& device, const std::vector<char>& code) {
             // Ensure SPIR-V bytecode is properly aligned
-            std::cout << "Shader file size: " << code.size() << " bytes" << std::endl;
+           // std::cout << "Shader file size: " << code.size() << " bytes" << std::endl;
             assert(code.size() % 4 == 0 && "SPIR-V bytecode size must be a multiple of 4");
 
             // Create shader module create info
@@ -974,7 +1124,7 @@ namespace VulkanCube {
             // Loop through and record command buffers
             for (size_t i = 0; i < commandBuffers.size(); i++) {
                 vk::CommandBufferBeginInfo beginInfo;
-                commandBuffers[i]->begin(beginInfo);
+                (void)commandBuffers[i]->begin(beginInfo);
 
                 vk::RenderPassBeginInfo renderPassInfo(
                     *renderPass,
@@ -997,13 +1147,14 @@ namespace VulkanCube {
                 );
                 commandBuffers[i]->drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
                 commandBuffers[i]->endRenderPass();
-                commandBuffers[i]->end();
+                (void)commandBuffers[i]->end();
             }
         }
 
         // --- Texture Creation ---
         void createTextureImage() {
             int texWidth, texHeight, texChannels;
+            stbi_set_flip_vertically_on_load(true);
             stbi_uc* pixels = stbi_load("texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
             if (!pixels) {
                 throw std::runtime_error(std::string("Failed to load texture image: ") + stbi_failure_reason());
@@ -1147,7 +1298,7 @@ namespace VulkanCube {
             vertexBufferMemory = std::move(allocResult.value);  // Move the allocated memory into vertexBufferMemory
 
             // Bind the memory to the buffer
-            device->bindBufferMemory(*vertexBuffer, *vertexBufferMemory, 0);
+            (void)device->bindBufferMemory(*vertexBuffer, *vertexBufferMemory, 0);
 
             // Map the memory and copy vertex data
             auto mapResult = device->mapMemory(*vertexBufferMemory, 0, bufferSize);
@@ -1170,13 +1321,13 @@ namespace VulkanCube {
                 vk::SharingMode::eExclusive
             );
 
-#ifdef _DEBUG
-            std::cout << "Indices: ";
-            for (uint32_t index : indices) {
-                std::cout << index << " ";
-            }
-            std::cout << std::endl;
-#endif
+//#ifdef _DEBUG
+//            std::cout << "Indices: ";
+//            for (uint32_t index : indices) {
+//                std::cout << index << " ";
+//            }
+//            std::cout << std::endl;
+//#endif
 
             // Create the index buffer
             auto result = device->createBufferUnique(bufferInfo);
@@ -1199,7 +1350,7 @@ namespace VulkanCube {
             indexBufferMemory = std::move(allocResult.value);  // Move the allocated memory into indexBufferMemory
 
             // Bind the memory to the buffer
-            device->bindBufferMemory(*indexBuffer, *indexBufferMemory, 0);
+            (void)device->bindBufferMemory(*indexBuffer, *indexBufferMemory, 0);
 
             // Map the memory and copy index data
             auto mapResult = device->mapMemory(*indexBufferMemory, 0, bufferSize);
@@ -1252,7 +1403,7 @@ namespace VulkanCube {
             }
             vk::UniqueDeviceMemory bufferMemory = std::move(memoryResult.value);
 
-            device->bindBufferMemory(*buffer, *bufferMemory, 0);
+            (void)device->bindBufferMemory(*buffer, *bufferMemory, 0);
             return { std::move(buffer), std::move(bufferMemory) };
         }
 
@@ -1271,28 +1422,28 @@ namespace VulkanCube {
 
             // Begin command buffer recording
             vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-            commandBuffer->begin(beginInfo);
+            (void)commandBuffer->begin(beginInfo);
 
             // Perform the buffer copy
             vk::BufferCopy copyRegion(0, 0, size);  // From offset 0 to offset 0, with the specified size
             commandBuffer->copyBuffer(srcBuffer, dstBuffer, 1, &copyRegion);
 
             // End command buffer recording
-            commandBuffer->end();
+            (void)commandBuffer->end();
 
             // Submit command buffer to the graphics queue
             vk::SubmitInfo submitInfo(0, nullptr, nullptr, 1, &*commandBuffer);
 
             // Submit with error checking
             try {
-                graphicsQueue.submit(1, &submitInfo, nullptr);
+                (void)graphicsQueue.submit(1, &submitInfo, nullptr);
             }
             catch (const std::exception& e) {
                 std::cerr << "Error during command buffer submission: " << e.what() << std::endl;
             }
 
             // Wait for the queue to finish processing the commands
-            graphicsQueue.waitIdle();
+            (void)graphicsQueue.waitIdle();
         }
 
         // Surface creation
@@ -1324,6 +1475,7 @@ namespace VulkanCube {
             depthImageView = createImageViewUnique(*depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth);
         }
 
+        // query depth format
         vk::Format findDepthFormat() {
             return findSupportedFormat(
                 { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
@@ -1332,19 +1484,22 @@ namespace VulkanCube {
             );
         }
 
-        vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling,
-            vk::FormatFeatureFlags features) {
+        // query support format
+        vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features) {
             for (vk::Format format : candidates) {
                 vk::FormatProperties props = physicalDevice.getFormatProperties(format);
+
                 if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
                     return format;
                 }
-                else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+                if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
                     return format;
                 }
             }
-            throw std::runtime_error("Failed to find supported format!");
+
+            throw std::runtime_error("Failed to find a supported format for depth buffer!");
         }
+
 
         // Framebuffers
         void createFramebuffers() {
@@ -1406,7 +1561,7 @@ namespace VulkanCube {
 
                 // 🔥 Store the memory in the vector
                 uniformBuffersMemory[i] = device->allocateMemoryUnique(allocInfo).value;
-                device->bindBufferMemory(*uniformBuffers[i], *uniformBuffersMemory[i], 0);
+                (void)device->bindBufferMemory(*uniformBuffers[i], *uniformBuffersMemory[i], 0);
 
                 // Map the memory
                 auto mapResult = device->mapMemory(*uniformBuffersMemory[i], 0, sizeof(UniformBufferObject));
@@ -1418,19 +1573,26 @@ namespace VulkanCube {
         }
 
         // Update uniform buffer
-        void updateUniformBuffer(uint32_t currentImage) {
+        void updateUniformBuffer(uint32_t currentImage, const Camera::State& camera) {
             static auto startTime = std::chrono::high_resolution_clock::now();
             auto currentTime = std::chrono::high_resolution_clock::now();
             float time = std::chrono::duration<float>(currentTime - startTime).count();
 
             UniformBufferObject ubo{};
-            ubo.model = glm::rotate(glm::mat4(1.0f), ((time / 4) * glm::radians(90.0f)), glm::vec3(0.0f, 0.0f, 1.5f));//time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-            ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
-            glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+            // Apply controlled cube rotation
+            ubo.model = glm::rotate(glm::mat4(1.0f), (cubeRotation*time), glm::vec3(0.0f, 0.0f, 1.0f));
 
+            // Use functional approach to get the view matrix
+            ubo.view = Camera::getViewMatrix(camera);
+           // std::cout << "View Matrix:\n" << glm::to_string(ubo.view) << std::endl;
+
+            // Set up perspective projection (flip Y for Vulkan)
+            glm::mat4 proj = glm::perspective(glm::radians(45.0f),
+                swapChainExtent.width / static_cast<float>(swapChainExtent.height),
+                0.1f, 10.0f);
+            proj[1][1] *= -1;
             ubo.proj = proj;
-            ubo.proj[1][1] *= -1;
 
             memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
         }
@@ -1484,7 +1646,7 @@ namespace VulkanCube {
                 descriptorWrites[0] = { *descriptorSets[i], 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &bufferInfo };
                 descriptorWrites[1] = { *descriptorSets[i], 1, 0, 1, vk::DescriptorType::eCombinedImageSampler, &imageInfo };
 
-                device->updateDescriptorSets(descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+                device->updateDescriptorSets((uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
             }
         }
 
@@ -1500,7 +1662,7 @@ namespace VulkanCube {
             bindings[1] = { 1, vk::DescriptorType::eCombinedImageSampler, 1,
                             vk::ShaderStageFlagBits::eFragment };
 
-            vk::DescriptorSetLayoutCreateInfo layoutInfo({}, bindings.size(), bindings.data());
+            vk::DescriptorSetLayoutCreateInfo layoutInfo({}, (uint32_t)bindings.size(), bindings.data());
 
             // Create the descriptor set layout and check the result
             try {
@@ -1594,55 +1756,83 @@ namespace VulkanCube {
             vk::CommandBufferBeginInfo beginInfo{
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit
             };
-            cmdBuffer->begin(beginInfo);
+            (void)cmdBuffer->begin(beginInfo);
 
             return cmdBuffer; // Ownership transferred via move
         }
 
         // Helper to submit commands
         void endSingleTimeCommands(vk::UniqueCommandBuffer& cmdBuffer) {
-            cmdBuffer->end();
+            (void)cmdBuffer->end();
 
             vk::SubmitInfo submitInfo;
             submitInfo.setCommandBuffers(*cmdBuffer);
-            graphicsQueue.submit(submitInfo, nullptr);
-            graphicsQueue.waitIdle(); // Or use fences for async operation
+            (void)graphicsQueue.submit(submitInfo, nullptr);
+            (void)graphicsQueue.waitIdle(); // Or use fences for async operation
         }
 
         // Image transitions
-        void transitionImageLayout(vk::Image image, vk::Format format,
-            vk::ImageLayout oldLayout, vk::ImageLayout newLayout) {
-            // Store the UniqueCommandBuffer BY VALUE (not reference)
-            vk::UniqueCommandBuffer commandBuffer = beginSingleTimeCommands();
+        void transitionImageLayout(vk::Image image, vk::Format format, vk::ImageLayout oldLayout, vk::ImageLayout newLayout) {
+            vk::UniqueCommandBuffer commandBuffer = beginSingleTimeCommands(); // Your function for command buffer allocation
 
-            vk::ImageMemoryBarrier barrier(
-                {}, {}, oldLayout, newLayout, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, image,
-                vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+            vk::ImageMemoryBarrier barrier{};
+            barrier.oldLayout = oldLayout;
+            barrier.newLayout = newLayout;
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image = image;
+
+            // Handle depth-stencil formats properly
+            if (format == vk::Format::eD32Sfloat || format == vk::Format::eD16Unorm) {
+                barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+            }
+            else {
+                barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+            }
+
+            barrier.subresourceRange.baseMipLevel = 0;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.layerCount = 1;
 
             vk::PipelineStageFlags sourceStage;
             vk::PipelineStageFlags destinationStage;
 
-            if (oldLayout == vk::ImageLayout::eUndefined &&
-                newLayout == vk::ImageLayout::eTransferDstOptimal) {
-                barrier.srcAccessMask = {};
+            if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+                barrier.srcAccessMask = vk::AccessFlags{}; // Explicit zero-initialization
+                barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+
+                sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+                destinationStage = vk::PipelineStageFlagBits::eEarlyFragmentTests;
+            }
+            // Handle TransferDstOptimal case
+            else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal) {
+                barrier.srcAccessMask = vk::AccessFlags{}; // Explicit zero-initialization
                 barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+
                 sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
                 destinationStage = vk::PipelineStageFlagBits::eTransfer;
             }
-            else if (oldLayout == vk::ImageLayout::eTransferDstOptimal &&
-                newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+            // Handle transition from TransferDstOptimal to ShaderReadOnlyOptimal
+            else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
                 barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
                 barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
                 sourceStage = vk::PipelineStageFlagBits::eTransfer;
                 destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
             }
             else {
-                throw std::invalid_argument("Unsupported layout transition!");
+                std::cerr << "Unsupported transition: "
+                    << vk::to_string(oldLayout)
+                    << " -> "
+                    << vk::to_string(newLayout)
+                    << std::endl;
+                throw std::invalid_argument("Unsupported layout transition for depth image!");
             }
 
-            // Use commandBuffer.get() to access the underlying VkCommandBuffer
-            commandBuffer->pipelineBarrier(sourceStage, destinationStage, {}, 0, nullptr, 0, nullptr, 1, &barrier);
-            endSingleTimeCommands(commandBuffer);
+            commandBuffer.get().pipelineBarrier(sourceStage, destinationStage, {}, {}, {}, barrier);
+
+            endSingleTimeCommands(commandBuffer); // Function to submit and free the command buffer
         }
 
         // Buffer/image copying
@@ -1661,12 +1851,14 @@ namespace VulkanCube {
         // Draw frame implementation
         void drawFrame() {
             
-            device->waitForFences(1, &*inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+            (void)device->waitForFences(1, &*inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
             // Acquire image index
             uint32_t imageIndex;
             auto result = device->acquireNextImageKHR(*swapChain, UINT64_MAX,
                 *imageAvailableSemaphores[currentFrame], nullptr, &imageIndex);
+
+            // camera might need to go here
 
             // Validate image index
             if (imageIndex >= swapChainImages.size()) {
@@ -1674,7 +1866,8 @@ namespace VulkanCube {
             }
 
             // Update UBO only if index is valid
-            updateUniformBuffer(imageIndex);
+            updateUniformBuffer(imageIndex, cam);
+
 
             if (result == vk::Result::eErrorOutOfDateKHR || framebufferResized) {
                 framebufferResized = false;
@@ -1682,7 +1875,7 @@ namespace VulkanCube {
                 return;
             }
 
-            device->resetFences(1, &*inFlightFences[currentFrame]);
+            (void)device->resetFences(1, &*inFlightFences[currentFrame]);
 
             vk::SubmitInfo submitInfo(
                 1, &*imageAvailableSemaphores[currentFrame],
@@ -1690,7 +1883,7 @@ namespace VulkanCube {
                 1, &*commandBuffers[imageIndex],
                 1, &*renderFinishedSemaphores[currentFrame]);
 
-            graphicsQueue.submit(1, &submitInfo, *inFlightFences[currentFrame]);
+            (void)graphicsQueue.submit(1, &submitInfo, *inFlightFences[currentFrame]);
 
             vk::PresentInfoKHR presentInfo(
                 1, &*renderFinishedSemaphores[currentFrame],
@@ -1714,7 +1907,7 @@ namespace VulkanCube {
                 glfwWaitEvents();
             }
 
-            device->waitIdle();
+            (void)device->waitIdle();
 
             cleanupSwapChain();
 
@@ -1763,16 +1956,21 @@ namespace VulkanCube {
         }
 
         void mainLoop() {
-
             while (!glfwWindowShouldClose(window)) {
                 glfwPollEvents();
+
+                // Update camera here (if not already updated via callbacks)
+                // For example, you might have an updateCamera(deltaTime) function:
+                float deltaTime = calculateDeltaTime(); // Compute frame delta time
+                updateCamera(deltaTime);  // This function would internally call Camera::processKeyboard, etc.
+
                 drawFrame();
             }
             device->waitIdle();
         }
 
         void cleanup() {
-            device->waitIdle();
+            (void)device->waitIdle();
             cleanupSwapChain();
 
             // Clear command buffers and descriptor sets so they're destroyed before the command pool.

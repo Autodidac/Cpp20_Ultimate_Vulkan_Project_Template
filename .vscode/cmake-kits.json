@@ -7,5 +7,29 @@
       },
       "toolchainFile": "../${workspaceFolder}/vcpkg/scripts/buildsystems/vcpkg.cmake"
     }
+    {
+      "name": "Clang with vcpkg",
+      "compilers": {
+        "C": "/usr/bin/clang",
+        "CXX": "/usr/bin/clang++"
+      },
+      "toolchainFile": "../${workspaceFolder}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+    }
+    {
+      "name": "CMake with vcpkg",
+      "compilers": {
+        "C": "/usr/bin/gcc",
+        "CXX": "/usr/bin/g++"
+      },
+      "toolchainFile": "../${workspaceFolder}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+    }
+    {
+      "name": "Console with vcpkg",
+      "compilers": {
+        "C": "/usr/bin/gcc",
+        "CXX": "/usr/bin/g++"
+      },
+      "toolchainFile": "../${workspaceFolder}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+    }
   ]
   

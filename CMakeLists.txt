@@ -21,7 +21,7 @@ if (POLICY CMP0141)
 endif()
 
 # Enforce install location at top-level (in the project root)
-set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/built" CACHE PATH "Install path prefix" FORCE)
+set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}" CACHE PATH "Install path prefix" FORCE)
 message(STATUS "Install Prefix: ${CMAKE_INSTALL_PREFIX}")
 
 # Global output directories

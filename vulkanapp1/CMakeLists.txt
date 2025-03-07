@@ -5,14 +5,19 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
       CACHE STRING "Vcpkg toolchain file")
 endif()
 
+cmake_minimum_required(VERSION 3.8)
+project(vulkanapp1 LANGUAGES CXX)
+
+# Use C++20
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Create executable for vulkanapp1
 add_executable(vulkanapp1
     vulkanapp1.cpp
+    avulkanheaderonly.hpp
+    avulkancamera.hpp
 )
-
-# Find GLFW and GLM
-find_package(glfw3 REQUIRED)
-find_package(glm CONFIG REQUIRED)
 
 # Vulkan via SDK installation
 set(VULKAN_SDK_ENV $ENV{VULKAN_SDK})
@@ -34,10 +39,15 @@ target_link_directories(vulkanapp1 PRIVATE
     ${VCPKG_INSTALLATION_ROOT}/x64-windows/lib
 )
 
+# Find Vulkan, glfw3, and glm
+find_package(Vulkan REQUIRED)
+# Find GLFW and GLM
+find_package(glfw3 CONFIG QUIET)
+find_package(glm QUIET)
+
 target_link_libraries(vulkanapp1 PRIVATE
-    Vulkan          # Link directly from SDK -Vulkan::  Vulkan, no Vulkan::Vulkan needed
+    Vulkan-1          # Link directly from SDK -Vulkan::  Vulkan, no Vulkan::Vulkan needed
     glfw
-    glm::glm
 )
 
 # Installation rule

@@ -40,6 +40,15 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #include <stdexcept>         // For exceptions (if necessary)
 #include <string>   // For std::string
 #include <vector>   // For std::vector
+#include <chrono>
+
+float calculateDeltaTime() {
+    static auto lastTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
+    lastTime = currentTime;
+    return deltaTime;
+}
 
 //static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 //    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -143,23 +152,14 @@ struct DebugMessengerDeleter {
 namespace VulkanCube {
 
     // setup the camera
-    auto cam = Camera::create(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
+   // auto cam = Camera::create(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f);
+    inline Camera::State cam = Camera::create(
+        glm::vec3(0.0f, 0.0f, 5.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        -90.0f, 0.0f
+    );
 
-    float lastX = 400, lastY = 300;
-    bool firstMouse = true;
-    // External variable to control cube rotation (update via input handling)
-    float cubeRotation = 0.0f; // In radians, updated per frame or by user input
 
-    void mouse_callback(GLFWwindow* window, float xpos, float ypos) {
-        static float lastX = xpos, lastY = ypos;
-
-        float xOffset = xpos - lastX;
-        float yOffset = lastY - ypos; // Reversed since y-coordinates go bottom to top
-        lastX = xpos;
-        lastY = ypos;
-
-        Camera::processMouse(cam, xOffset, yOffset);
-    }
 
     //enum class Direction { Forward = 0, Backward, Left, Right };
 
@@ -379,6 +379,35 @@ namespace VulkanCube {
         // Vulkan extensions required
         const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
+        float lastX = 400, lastY = 300;
+        bool firstMouse = true;
+        // External variable to control cube rotation (update via input handling)
+        float cubeRotation = 1.0f; // In radians, updated per frame or by user input
+
+        // Define updateCamera to process keyboard input and update the camera state.
+        void updateCamera(float deltaTime) {
+            // Assuming you have a global GLFWwindow* named 'window'
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+                Camera::processKeyboard(VulkanCube::cam, Camera::Direction::Forward, deltaTime);
+            }
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+                Camera::processKeyboard(VulkanCube::cam, Camera::Direction::Backward, deltaTime);
+            }
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+                Camera::processKeyboard(VulkanCube::cam, Camera::Direction::Left, deltaTime);
+            }
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                Camera::processKeyboard(VulkanCube::cam, Camera::Direction::Right, deltaTime);
+            }
+        }
+
+        static void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+            auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (app) {
+                app->processMouseInput(xpos, ypos);
+            }
+        }
+
         void initWindow() {
             // Initialize the dispatcher for global (instance-independent) functions.
             VULKAN_HPP_DEFAULT_DISPATCHER.init();
@@ -392,11 +421,33 @@ namespace VulkanCube {
             window = glfwCreateWindow(800, 600, "Vulkan Cube", nullptr, nullptr);
             glfwSetWindowUserPointer(window, this);
             glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+
+            // Register the mouse callback to handle mouse movement.
+            glfwSetCursorPosCallback(window, mouse_callback);
+            // Disable the cursor for free-look camera behavior. use Alt+F4 to escape the lack of mouse and close the window 
+            //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+
+        void processMouseInput(double xpos, double ypos) {
+            if (firstMouse) {
+                lastX = static_cast<float>(xpos);
+                lastY = static_cast<float>(ypos);
+                firstMouse = false;
+            }
+
+            float xOffset = static_cast<float>(xpos) - lastX;
+            float yOffset = lastY - static_cast<float>(ypos); // Invert Y
+            yOffset = static_cast<float>(ypos) - lastY; // Remove inversion - comment this out to flip Y axis in mouse control
+
+            lastX = static_cast<float>(xpos);
+            lastY = static_cast<float>(ypos);
+
+            Camera::processMouse(VulkanCube::cam, xOffset, yOffset);
         }
 
         static void framebufferResizeCallback(GLFWwindow* window, int, int) {
-            auto app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-            app->framebufferResized = true;
+            auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (app) app->framebufferResized = true;
         }
 
         void initVulkan() {
@@ -1529,11 +1580,11 @@ namespace VulkanCube {
 
             UniformBufferObject ubo{};
 
-            // Apply manual cube rotation if desired (or leave as identity for a static cube)
-            ubo.model = glm::rotate(glm::mat4(1.0f), cubeRotation, glm::vec3(0.0f, 0.0f, 1.0f));
+            // Apply controlled cube rotation
+            ubo.model = glm::rotate(glm::mat4(1.0f), (cubeRotation*time), glm::vec3(0.0f, 0.0f, 1.0f));
 
             // Use functional approach to get the view matrix
-            ubo.view = getViewMatrix(camera);
+            ubo.view = Camera::getViewMatrix(camera);
            // std::cout << "View Matrix:\n" << glm::to_string(ubo.view) << std::endl;
 
             // Set up perspective projection (flip Y for Vulkan)
@@ -1905,12 +1956,17 @@ namespace VulkanCube {
         }
 
         void mainLoop() {
-
             while (!glfwWindowShouldClose(window)) {
                 glfwPollEvents();
+
+                // Update camera here (if not already updated via callbacks)
+                // For example, you might have an updateCamera(deltaTime) function:
+                float deltaTime = calculateDeltaTime(); // Compute frame delta time
+                updateCamera(deltaTime);  // This function would internally call Camera::processKeyboard, etc.
+
                 drawFrame();
             }
-            (void)device->waitIdle();
+            device->waitIdle();
         }
 
         void cleanup() {

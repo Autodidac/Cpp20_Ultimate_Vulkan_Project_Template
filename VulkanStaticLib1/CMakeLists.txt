@@ -1,3 +1,9 @@
+# Set the vcpkg toolchain file
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg_installed/scripts/buildsystems/vcpkg.cmake"
+      CACHE STRING "Vcpkg toolchain file")
+endif()
+
 # Create the static library target
 add_library(VulkanStaticLib1 STATIC)
 
@@ -22,9 +28,13 @@ target_sources(VulkanStaticLib1 PRIVATE
 
 # Find necessary packages
 find_package(glfw3 CONFIG REQUIRED)
-
+find_package(glm CONFIG REQUIRED)
 # Link GLM (header-only) to VulkanStaticLib1
-target_link_libraries(VulkanStaticLib1 PUBLIC glm::glm)
+target_link_libraries(VulkanStaticLib1 PRIVATE
+    Vulkan-1          # Link directly from SDK -Vulkan::  Vulkan, no Vulkan::Vulkan needed
+    glfw3dll
+    glm
+)
 
 # Compiler-specific options for GNU/Clang/MSVC
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
